@@ -1,6 +1,11 @@
+import path from 'node:path';
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Self-contained server bundle for the container image (apps/web/Dockerfile).
+  output: 'standalone',
+  // Monorepo: trace from the repo root so workspace packages are included.
+  outputFileTracingRoot: path.join(import.meta.dirname, '../..'),
   compress: true,
   poweredByHeader: false,
   trailingSlash: false,

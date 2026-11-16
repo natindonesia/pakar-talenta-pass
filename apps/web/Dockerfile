@@ -1,36 +1,32 @@
+# Container image for the Pakar Talenta Pass web app (Next.js, standalone output).
+# Build from the repo root:  docker build -t pakar-talenta-pass-web -f apps/web/Dockerfile .
 FROM node:22-alpine AS base
-ENV NEXT_TELEMETRY_DISABLED 1
+ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 
 FROM base AS deps
-RUN apk add --no-cache python3 make g++
-COPY package.json package-lock.json* ./
+COPY package.json package-lock.json ./
 COPY apps/web/package.json ./apps/web/
-COPY packages/*/package.json ./packages/
-RUN ls packages/*/package.json | while read f; do mkdir -p "$(dirname "$f"/src)" 2>/dev/null; done
-RUN npm install 2>/dev/null || npm install --legacy-peer-deps
+COPY packages ./packages
+RUN npm ci --no-audit --no-fund
 
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
-COPY apps/web ./apps/web
-COPY packages ./packages
-COPY package.json ./
-WORKDIR /app/apps/web
-RUN npm run build 2>/dev/null || npx next build
+COPY . .
+RUN npm run build --workspace=@pakar-talenta/web
 
 FROM base AS runner
-WORKDIR /app
-
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-
-RUN addgroup -g 1001 -S nodejs && adduser -u 1001 -S nextjs -S www-data -G www-data
-
-USER nextjs
-
+RUN addgroup -g 1001 -S nodejs && adduser -u 1001 -S nextjs -G nodejs
+WORKDIR /app
+# Standalone output mirrors the monorepo root: the server lives at apps/web/server.js.
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
-
+USER nextjs
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
 EXPOSE 3000
-CMD ["node", "server.js"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:3000/api/health || exit 1
+CMD ["node", "apps/web/server.js"]
