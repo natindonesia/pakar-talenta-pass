@@ -11,7 +11,10 @@ COPY packages ./packages
 RUN npm ci --no-audit --no-fund
 
 FROM base AS builder
+# Workspace packages can keep their own node_modules (e.g. packages/mail/node_modules/nodemailer).
+# .dockerignore excludes node_modules from the context, so bring them from the deps stage.
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/packages ./packages
 COPY . .
 RUN npm run build --workspace=@pakar-talenta/web
 

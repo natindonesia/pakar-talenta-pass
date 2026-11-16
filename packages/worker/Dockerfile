@@ -14,6 +14,7 @@ FROM base AS runner
 ENV NODE_ENV=production
 RUN addgroup -g 1001 -S nodejs && adduser -u 1001 -S nextjs -G nodejs
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=deps --chown=nextjs:nodejs /app/packages ./packages
 COPY --chown=nextjs:nodejs package.json ./
 COPY --chown=nextjs:nodejs packages ./packages
 USER nextjs
