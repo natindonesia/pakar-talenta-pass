@@ -30,7 +30,13 @@ let worker: Worker | undefined;
 function getConnection(): IORedis {
   if (!connection) {
     const url = process.env.REDIS_URL ?? 'redis://localhost:6379';
-    connection = new IORedis(url);
+    // BullMQ opens a blocking connection (BRPOPLPUSH) for the worker. ioredis
+    // aborts that command after `maxRetriesPerRequest` retries by default, which
+    // makes BullMQ refuse to start at all:
+    //   "BullMQ: Your redis options maxRetriesPerRequest must be null."
+    // `null` means "retry forever", which is what a long-lived blocking read
+    // needs; the queue's own reconnect logic handles a Redis restart.
+    connection = new IORedis(url, { maxRetriesPerRequest: null });
   }
   return connection;
 }
