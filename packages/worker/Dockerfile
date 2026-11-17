@@ -18,4 +18,4 @@ COPY --from=deps --chown=nextjs:nodejs /app/packages ./packages
 COPY --chown=nextjs:nodejs package.json ./
 COPY --chown=nextjs:nodejs packages ./packages
 USER nextjs
-CMD ["node_modules/.bin/tsx", "packages/worker/src/index.ts"]
+CMD ["node_modules/.bin/tsx", "packages/worker/src/main.ts"]
